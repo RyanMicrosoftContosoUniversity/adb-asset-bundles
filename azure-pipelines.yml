@@ -11,19 +11,19 @@ pr:
 variables:
   # Populate these securely via pipeline variables or variable groups.
   - name: AZ_SUBSCRIPTION_ID
-    value: ''
+    value: '910ebf13-1058-405d-b6cf-eda03e5288d1'
   - name: AZ_RESOURCE_GROUP_FOR_STATE
-    value: ''
+    value: 'terraform-rg'
   - name: AZ_STORAGE_ACCOUNT_FOR_STATE
-    value: ''
+    value: 'terraformsaeheus2'
   - name: AZ_STORAGE_CONTAINER_FOR_STATE
-    value: ''
+    value: 'tf-state-container'
   - name: TF_STATE_KEY
-    value: ''
+    value: 'dev.tfstate'
   - name: DATABRICKS_HOST
-    value: ''
+    value: 'https://adb-279469438045347.7.azuredatabricks.net/'
   - name: DATABRICKS_AZURE_RESOURCE_ID
-    value: ''
+    value: '/subscriptions/910ebf13-1058-405d-b6cf-eda03e5288d1/resourceGroups/adb-dev/providers/Microsoft.Databricks/workspaces/adb-dev'
   - name: BUNDLE_TARGET
     value: 'dev'
 
@@ -63,7 +63,7 @@ stages:
         - task: AzureCLI@2
           displayName: 'Terraform init/plan/apply via AzureCLI@2 (OIDC)'
           inputs:
-            azureSubscription: '<AZDO_SERVICE_CONNECTION>'
+            azureSubscription: 'fabric-sc'
             scriptType: 'pscore'
             scriptLocation: 'inlineScript'
             useGlobalConfig: true
@@ -98,7 +98,7 @@ stages:
           displayName: 'Example: capture SP credentials (disabled)'
           condition: and(succeeded(), false)
           inputs:
-            azureSubscription: '<AZDO_SERVICE_CONNECTION>'
+            azureSubscription: 'fabric-sc'
             scriptType: 'pscore'
             scriptLocation: 'inlineScript'
             useGlobalConfig: true
@@ -135,7 +135,7 @@ stages:
         - task: AzureCLI@2
           displayName: 'Configure Databricks CLI via AzureCLI@2 (OIDC)'
           inputs:
-            azureSubscription: '<AZDO_SERVICE_CONNECTION>'
+            azureSubscription: 'fabric-sc'
             scriptType: 'pscore'
             scriptLocation: 'inlineScript'
             useGlobalConfig: true
