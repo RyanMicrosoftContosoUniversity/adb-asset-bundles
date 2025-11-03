@@ -63,11 +63,40 @@ function Ensure-ExecutionPolicy {
 }
 
 function Ensure-Chocolatey {
-    if (Get-Command choco -ErrorAction SilentlyContinue) {
-        Write-Log -Message 'Chocolatey already installed.'
+    $chocoHome = 'C:\ProgramData\chocolatey'
+    $chocoExe  = Join-Path $chocoHome 'bin\choco.exe'
+
+    # Fast-path: command already resolvable
+    $cmd = Get-Command choco -ErrorAction SilentlyContinue
+    if ($cmd) {
+        Write-Log -Message "Chocolatey already installed at $($cmd.Source)."
         return
     }
 
+    # If install folder exists, prefer to wire up PATH and proceed
+    if (Test-Path $chocoExe) {
+        Write-Log -Message "Chocolatey files detected at $chocoExe but not on PATH. Fixing PATH for this process."
+        # Prepend to current process PATH so subsequent calls can find it
+        $binDir = Split-Path $chocoExe
+        if ($env:Path.Split(';') -notcontains $binDir) {
+            $env:Path = "$binDir;$env:Path"
+        }
+
+        # Also emit to Azure Pipelines so following steps see it
+        if ($env:TF_BUILD) {
+            Write-Host "##vso[task.prependpath]$binDir"
+        }
+
+        # Final check
+        if (Get-Command choco -ErrorAction SilentlyContinue) {
+            return
+        } else {
+            Write-Log -Level 'WARN' -Message "Chocolatey still not resolvable after PATH fix. Continuing without throwing."
+            return
+        }
+    }
+
+    # Fresh install path
     Write-Log -Message 'Installing Chocolatey...'
     $installScript = {
         Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -75,11 +104,22 @@ function Ensure-Chocolatey {
         $script = Invoke-RestMethod -Uri 'https://community.chocolatey.org/install.ps1'
         Invoke-Expression $script
     }
+
     Invoke-WithRetry -ScriptBlock $installScript
 
-    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-        throw 'Chocolatey installation failed. Ensure internet connectivity and rerun.'
+    # Wire PATH for current process (installer updates Machine PATH but current process won’t see it)
+    if (Test-Path $chocoExe) {
+        $binDir = Split-Path $chocoExe
+        if ($env:Path.Split(';') -notcontains $binDir) {
+            $env:Path = "$binDir;$env:Path"
+        }
+        if ($env:TF_BUILD) {
+            Write-Host "##vso[task.prependpath]$binDir"
+        }
+        return
     }
+
+    throw 'Chocolatey installation failed or not resolvable. Verify connectivity and permissions.'
 }
 
 function Install-ChocoPackage {
