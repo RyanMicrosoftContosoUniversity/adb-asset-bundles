@@ -4,12 +4,10 @@ bundle:
 targets:
   dev:
     mode: development
-    workspace:
-      host: ${env.DATABRICKS_HOST}
+    # No workspace.host here; CLI will use DATABRICKS_HOST from environment
   prod:
     mode: production
-    workspace:
-      host: ${env.DATABRICKS_HOST}
+    # Same here; rely on environment variable
 
 resources:
   jobs:
