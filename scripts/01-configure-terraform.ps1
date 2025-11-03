@@ -73,7 +73,10 @@ key                 = "<TF_STATE_KEY>"
 
 $terraformRcPath = Join-Path $env:USERPROFILE '.terraformrc'
 if (-not (Test-Path $terraformRcPath)) {
-    "plugin_cache_dir = \"$pluginCacheDir\"" | Set-Content -Path $terraformRcPath -Encoding UTF8
+    
+"plugin_cache_dir = `"$pluginCacheDir`"" |
+    Set-Content -Path $terraformRcPath -Encoding UTF8
+
     Write-Info "Created $terraformRcPath referencing plugin cache."
 } else {
     $content = Get-Content -Path $terraformRcPath -Raw
@@ -81,7 +84,9 @@ if (-not (Test-Path $terraformRcPath)) {
         $backupPath = "$terraformRcPath.bak_$(Get-Date -Format yyyyMMddHHmmss)"
         Copy-Item -Path $terraformRcPath -Destination $backupPath -Force
         Write-Info "Existing .terraformrc detected. Backup created at $backupPath."
-        Add-Content -Path $terraformRcPath -Value "`nplugin_cache_dir = \"$pluginCacheDir\"" -Encoding UTF8
+        Add-Content -Path $terraformRcPath -Value @"
+plugin_cache_dir = "$pluginCacheDir"
+"@ -Encoding UTF8
         Write-Info "Appended plugin_cache_dir to existing .terraformrc."
     } else {
         Write-Info ".terraformrc already references a plugin cache; no changes made."
