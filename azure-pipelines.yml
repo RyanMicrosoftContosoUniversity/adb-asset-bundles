@@ -34,9 +34,9 @@ stages:
     - job: Bootstrap
       displayName: 'Bootstrap tooling'
       pool:
-        name: 'SelfHosted-Windows'
+        name: 'Default'
       steps:
-        - powershell: |
+        - pwsh: |
             Set-StrictMode -Version Latest
             $ErrorActionPreference = 'Stop'
             $bootstrapScript = Join-Path "$(System.DefaultWorkingDirectory)" 'scripts\\00-bootstrap-prereqs.ps1'
@@ -49,7 +49,6 @@ stages:
               & $bootstrapScript
             }
           displayName: 'Run 00-bootstrap-prereqs.ps1 (idempotent)'
-          pwsh: true
 
 - stage: Terraform
   displayName: 'Terraform plan and apply'
@@ -58,7 +57,7 @@ stages:
     - job: TerraformPlanApply
       displayName: 'Terraform init/plan/apply'
       pool:
-        name: 'SelfHosted-Windows'
+        name: 'Default'
       steps:
         - task: AzureCLI@2
           displayName: 'Terraform init/plan/apply via AzureCLI@2 (OIDC)'
@@ -108,7 +107,7 @@ stages:
               Write-Host "##vso[task.setvariable variable=ARM_CLIENT_SECRET;issecret=true]$env:servicePrincipalKey"
               Write-Host "##vso[task.setvariable variable=ARM_TENANT_ID;issecret=true]$env:tenantId"
 
-        - powershell: |
+        - pwsh: |
             # Example follow-up step showing how to leverage captured SP credentials.
             # Enable this step together with the previous AzureCLI@2 block when using client secret auth.
             Set-StrictMode -Version Latest
@@ -121,7 +120,6 @@ stages:
             # databricks bundle validate
           displayName: 'Example: Databricks CLI using service principal secrets (disabled)'
           condition: and(succeeded(), false)
-          pwsh: true
 
 - stage: DatabricksBundles
   displayName: 'Databricks Asset Bundle deployment'
@@ -130,7 +128,7 @@ stages:
     - job: DeployBundles
       displayName: 'Validate and deploy Databricks bundle'
       pool:
-        name: 'SelfHosted-Windows'
+        name: 'Default'
       steps:
         - task: AzureCLI@2
           displayName: 'Configure Databricks CLI via AzureCLI@2 (OIDC)'
@@ -153,7 +151,7 @@ stages:
               databricks bundle deploy -t "$(BUNDLE_TARGET)" --auto-approve
               # databricks bundle run -t "$(BUNDLE_TARGET)" <job_key>
 
-        - powershell: |
+        - pwsh: |
             # Managed Identity example (disabled). Ensure the agent VM has a managed identity with access.
             Set-StrictMode -Version Latest
             $ErrorActionPreference = 'Stop'
@@ -165,4 +163,3 @@ stages:
             # databricks bundle validate
           displayName: 'Example: Databricks CLI using managed identity (disabled)'
           condition: and(succeeded(), false)
-          pwsh: true
