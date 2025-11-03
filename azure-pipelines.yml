@@ -131,15 +131,29 @@ stages:
         name: 'Default'
       steps:
         - pwsh: |
-            $bin = "$env:ProgramFiles\Databricks\bin"
-            if (Test-Path "$bin\databricks.exe") {
-              Write-Host "##vso[task.prependpath]$bin"
-              Write-Host "Databricks bin added to PATH for this job: $bin"
-            } else {
-              Write-Host "Databricks CLI not found at $bin"
+            $candidates = @(
+              "$env:ProgramFiles\Databricks\bin\databricks.exe",         # direct-download location
+              "C:\ProgramData\chocolatey\bin\databricks.exe",            # Chocolatey shim
+              "$env:LOCALAPPDATA\Programs\Databricks\bin\databricks.exe" # user-scope installs
+            )
+
+            $found = $null
+            foreach ($p in $candidates) {
+              if (Test-Path $p) { $found = $p; break }
+            }
+
+            if (-not $found) {
+              Write-Host "Databricks CLI not found in expected locations:"
+              $candidates | ForEach-Object { Write-Host " - $_" }
               exit 1
             }
+
+            $bin = Split-Path $found
+            Write-Host "##vso[task.prependpath]$bin"
+            Write-Host "Databricks bin added to PATH for this job: $bin"
+            & $found -v
           displayName: 'Ensure Databricks CLI on PATH for this job'
+
         - task: AzureCLI@2
           displayName: 'Configure Databricks CLI via AzureCLI@2 (OIDC)'
           inputs:
