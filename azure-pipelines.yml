@@ -166,13 +166,22 @@ stages:
               Set-StrictMode -Version Latest
               $ErrorActionPreference = 'Stop'
 
+              # Configure Databricks CLI for OIDC and set host
               & "$(System.DefaultWorkingDirectory)\scripts\02-configure-databricks-cli.ps1" -AuthMode OIDC -DatabricksHost "$(DATABRICKS_HOST)"
-
               $env:DATABRICKS_HOST = "$(DATABRICKS_HOST)"
 
-              databricks bundle validate
-              databricks bundle plan -t "$(BUNDLE_TARGET)"
-              databricks bundle deploy -t "$(BUNDLE_TARGET)" --auto-approve
+              # Always validate/plan for the selected target
+              databricks bundle validate -t "$(BUNDLE_TARGET)"
+              databricks bundle plan     -t "$(BUNDLE_TARGET)"
+
+              # Deploy only when the build is NOT for a Pull Request
+              if ($env:BUILD_REASON -eq 'PullRequest') {
+                Write-Host 'Pull Request detected. Skipping deploy.'
+              } else {
+                databricks bundle deploy -t "$(BUNDLE_TARGET)" --auto-approve
+              }
+
+              # Optional: run a job after deploy
               # databricks bundle run -t "$(BUNDLE_TARGET)" <job_key>
 
         - pwsh: |
