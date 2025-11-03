@@ -167,7 +167,7 @@ stages:
               $ErrorActionPreference = 'Stop'
 
               # Configure Databricks CLI for OIDC and set host
-              & "$(System.DefaultWorkingDirectory)\scripts\02-configure-databricks-cli.ps1" -AuthMode OIDC -DatabricksHost "$(DATABRICKS_HOST)"
+              & "$(System.DefaultWorkingDirectory)\scripts\02-configure-databricks-cli.ps1" -AuthMode OIDC -DatabricksHost "$(DATABRICKS_HOST) -SkipCurrentUserValidation"
               $env:DATABRICKS_HOST = "$(DATABRICKS_HOST)"
 
               # Always validate/plan for the selected target
