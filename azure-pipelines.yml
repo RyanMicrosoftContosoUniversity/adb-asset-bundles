@@ -22,8 +22,8 @@ variables:
     value: 'dev.tfstate'
   - name: DATABRICKS_HOST
     value: 'https://adb-279469438045347.7.azuredatabricks.net/'
-  - name: DATABRICKS_AZURE_RESOURCE_ID
-    value: '/subscriptions/910ebf13-1058-405d-b6cf-eda03e5288d1/resourceGroups/adb-dev/providers/Microsoft.Databricks/workspaces/adb-dev'
+  # - name: DATABRICKS_AZURE_RESOURCE_ID
+  #   value: '/subscriptions/910ebf13-1058-405d-b6cf-eda03e5288d1/resourceGroups/adb-dev/providers/Microsoft.Databricks/workspaces/adb-dev'
   - name: BUNDLE_TARGET
     value: 'dev'
 
@@ -184,6 +184,18 @@ stages:
         #       # Optional: run a job after deploy
         #       # databricks bundle run -t "$(BUNDLE_TARGET)" <job_key>
 
+        - pwsh: |
+            # Remove env hints that trigger Azure auth so only PAT remains
+            $toClear = @(
+              'DATABRICKS_AZURE_RESOURCE_ID',  # primary cause
+              'ARM_USE_MSI','ARM_CLIENT_ID','ARM_TENANT_ID','ARM_CLIENT_SECRET',
+              'AZURE_TENANT_ID','AZURE_CLIENT_ID','AZURE_CLIENT_SECRET',
+              'DATABRICKS_CONFIG_PROFILE'      # ensure no profile override
+            )
+            foreach ($name in $toClear) {
+              if (Test-Path "Env:$name") { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
+            }
+          displayName: 'Clear Azure auth env to force PAT'
         - pwsh: |
             Set-StrictMode -Version Latest
             $ErrorActionPreference = 'Stop'
