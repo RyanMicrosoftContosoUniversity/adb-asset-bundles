@@ -154,45 +154,69 @@ stages:
             & $found -v
           displayName: 'Ensure Databricks CLI on PATH for this job'
 
-        - task: AzureCLI@2
-          displayName: 'Configure Databricks CLI via AzureCLI@2 (OIDC)'
-          inputs:
-            azureSubscription: 'fabric-sc'
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            useGlobalConfig: true
-            workingDirectory: '$(System.DefaultWorkingDirectory)'
-            inlineScript: |
-              Set-StrictMode -Version Latest
-              $ErrorActionPreference = 'Stop'
+        # - task: AzureCLI@2
+        #   displayName: 'Configure Databricks CLI via AzureCLI@2 (OIDC)'
+        #   inputs:
+        #     azureSubscription: 'fabric-sc'
+        #     scriptType: 'pscore'
+        #     scriptLocation: 'inlineScript'
+        #     useGlobalConfig: true
+        #     workingDirectory: '$(System.DefaultWorkingDirectory)'
+        #     inlineScript: |
+        #       Set-StrictMode -Version Latest
+        #       $ErrorActionPreference = 'Stop'
 
-              # Configure Databricks CLI for OIDC and set host
-              & "$(System.DefaultWorkingDirectory)\scripts\02-configure-databricks-cli.ps1" -AuthMode OIDC -DatabricksHost "$(DATABRICKS_HOST) -SkipCurrentUserValidation"
-              $env:DATABRICKS_HOST = "$(DATABRICKS_HOST)"
+        #       # Configure Databricks CLI for OIDC and set host
+        #       & "$(System.DefaultWorkingDirectory)\scripts\02-configure-databricks-cli.ps1" -AuthMode OIDC -DatabricksHost "$(DATABRICKS_HOST) -SkipCurrentUserValidation"
+        #       $env:DATABRICKS_HOST = "$(DATABRICKS_HOST)"
 
-              # Always validate/plan for the selected target
-              databricks bundle validate -t "$(BUNDLE_TARGET)"
-              databricks bundle plan     -t "$(BUNDLE_TARGET)"
+        #       # Always validate/plan for the selected target
+        #       databricks bundle validate -t "$(BUNDLE_TARGET)"
+        #       databricks bundle plan     -t "$(BUNDLE_TARGET)"
 
-              # Deploy only when the build is NOT for a Pull Request
-              if ($env:BUILD_REASON -eq 'PullRequest') {
-                Write-Host 'Pull Request detected. Skipping deploy.'
-              } else {
-                databricks bundle deploy -t "$(BUNDLE_TARGET)" --auto-approve
-              }
+        #       # Deploy only when the build is NOT for a Pull Request
+        #       if ($env:BUILD_REASON -eq 'PullRequest') {
+        #         Write-Host 'Pull Request detected. Skipping deploy.'
+        #       } else {
+        #         databricks bundle deploy -t "$(BUNDLE_TARGET)" --auto-approve
+        #       }
 
-              # Optional: run a job after deploy
-              # databricks bundle run -t "$(BUNDLE_TARGET)" <job_key>
+        #       # Optional: run a job after deploy
+        #       # databricks bundle run -t "$(BUNDLE_TARGET)" <job_key>
 
         - pwsh: |
-            # Managed Identity example (disabled). Ensure the agent VM has a managed identity with access.
             Set-StrictMode -Version Latest
             $ErrorActionPreference = 'Stop'
-            $env:ARM_USE_MSI = 'true'
-            $env:ARM_CLIENT_ID = '$(ARM_CLIENT_ID)'
-            $env:DATABRICKS_AZURE_RESOURCE_ID = '$(DATABRICKS_AZURE_RESOURCE_ID)'
-            $env:DATABRICKS_HOST = '$(DATABRICKS_HOST)'
-            & "$(System.DefaultWorkingDirectory)\scripts\02-configure-databricks-cli.ps1" -AuthMode ManagedIdentity -SkipCurrentUserValidation
-            # databricks bundle validate
-          displayName: 'Example: Databricks CLI using managed identity (disabled)'
-          condition: and(succeeded(), false)
+
+            # Ensure the Databricks CLI is resolvable (your Option A step can remain before this)
+            # Add env for host and token (token must be secret variable in the pipeline)
+            $env:DATABRICKS_HOST  = "$(DATABRICKS_HOST)"
+            $env:DATABRICKS_TOKEN = "$(DATABRICKS_TOKEN)"
+
+            # Optional: quick diagnostics
+            databricks -v
+            Write-Host "Using target: $(BUNDLE_TARGET)"
+            Write-Host "DATABRICKS_HOST: $env:DATABRICKS_HOST"
+
+            # Run bundle commands with explicit target
+            databricks bundle validate -t "$(BUNDLE_TARGET)"
+            databricks bundle plan     -t "$(BUNDLE_TARGET)"
+
+            if ($env:BUILD_REASON -eq 'PullRequest') {
+              Write-Host 'Pull Request detected. Skipping deploy.'
+            } else {
+              databricks bundle deploy -t "$(BUNDLE_TARGET)" --auto-approve
+            }
+          displayName: 'Validate/plan/deploy Databricks bundle (PAT auth)'
+        # - pwsh: |
+        #     # Managed Identity example (disabled). Ensure the agent VM has a managed identity with access.
+        #     Set-StrictMode -Version Latest
+        #     $ErrorActionPreference = 'Stop'
+        #     $env:ARM_USE_MSI = 'true'
+        #     $env:ARM_CLIENT_ID = '$(ARM_CLIENT_ID)'
+        #     $env:DATABRICKS_AZURE_RESOURCE_ID = '$(DATABRICKS_AZURE_RESOURCE_ID)'
+        #     $env:DATABRICKS_HOST = '$(DATABRICKS_HOST)'
+        #     & "$(System.DefaultWorkingDirectory)\scripts\02-configure-databricks-cli.ps1" -AuthMode ManagedIdentity -SkipCurrentUserValidation
+        #     # databricks bundle validate
+        #   displayName: 'Example: Databricks CLI using managed identity (disabled)'
+        #   condition: and(succeeded(), false)
