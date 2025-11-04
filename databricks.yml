@@ -4,10 +4,8 @@ bundle:
 targets:
   dev:
     mode: development
-    # No workspace.host here; CLI will use DATABRICKS_HOST from environment
   prod:
     mode: production
-    # Same here; rely on environment variable
 
 resources:
   jobs:
@@ -22,4 +20,5 @@ resources:
         - job_cluster_key: small
           new_cluster:
             spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
             num_workers: 1
